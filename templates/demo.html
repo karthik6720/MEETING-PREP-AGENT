@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Guided demo{% endblock %}
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">Screen-recording walkthrough</p>
+  <h1>From a blank slate to a remembered deal</h1>
+  <p class="lede">A short live demo of Meeting Prep: first show what the agent misses, then watch it retain and recall the relationship.</p>
+</header>
+
+{% if not result %}
+<form method="post" action="{{ url_for('run_demo') }}" data-demo-form>
+  <button type="submit" class="primary">Start the live walkthrough</button>
+</form>
+{% else %}
+<div class="demo-progress-row">
+  <p class="demo-progress">Live walkthrough · Stage {{ result.steps|length }} of 7</p>
+  {% if result.steps|length >= 5 %}<span class="bonus-label">Core demo complete</span>{% endif %}
+</div>
+<ol class="steps">
+  {% for step in result.steps %}
+  <li class="step" aria-live="polite">
+    <p class="step-chapter">{{ step.chapter }}</p>
+    <h2>{{ step.title }}</h2>
+    <div class="voice-cue"><span class="eyebrow">Voice cue</span><p>{{ step.cue }}</p></div>
+    {% if step.kind == 'prep' %}
+    <div class="briefing">{{ step.result.briefing | briefing_html | safe }}</div>
+    {% if step.result.followups %}
+    <div class="followups"><h3>Open follow-ups</h3>
+      <ul>{% for f in step.result.followups %}<li>{{ f }}</li>{% endfor %}</ul></div>
+    {% endif %}
+    {% if step.chapter == 'Recall' and step.result.sources %}
+    <details class="recalled-memories">
+      <summary>Hindsight recalled {{ step.result.sources|length }} source memories</summary>
+      <ul>{% for source in step.result.sources[:4] %}<li>{{ source.text }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+    {% elif step.kind == 'meeting' %}
+    <p class="retained-summary"><span class="mono">{{ step.meeting.date }}</span><strong>{{ step.meeting.count }} memories retained</strong></p>
+    <div class="meeting-highlights">
+      {% for fact in step.meeting.facts.promises_by_user %}<p><strong>Our follow-up</strong><span>{{ fact }}</span></p>{% endfor %}
+      {% for fact in step.meeting.facts.promises_by_contact %}<p><strong>Their follow-up</strong><span>{{ fact }}</span></p>{% endfor %}
+      {% for fact in step.meeting.facts.concerns_or_objections %}<p><strong>Key concern</strong><span>{{ fact }}</span></p>{% endfor %}
+    </div>
+    <details class="meeting-facts">
+      <summary>View all retained facts</summary>
+      <ul>
+        {% for fact in step.meeting.facts.topics_discussed %}<li>{{ fact }}</li>{% endfor %}
+        {% for fact in step.meeting.facts.promises_by_user %}<li>Our commitment: {{ fact }}</li>{% endfor %}
+        {% for fact in step.meeting.facts.promises_by_contact %}<li>Contact commitment: {{ fact }}</li>{% endfor %}
+        {% for fact in step.meeting.facts.concerns_or_objections %}<li>Concern: {{ fact }}</li>{% endfor %}
+      </ul>
+    </details>
+    {% else %}
+    <blockquote>{{ step.text }}</blockquote>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ol>
+  {% if result.steps|length >= 5 %}
+  <section class="wrap-up">
+    <p class="eyebrow">Wrap-up · 30 sec</p>
+    <h2>Memory turns meeting history into useful next steps.</h2>
+    <p>“The key takeaway is that the agent doesn’t just store notes. It can bring forward the right commitments and concerns when the next meeting matters.”</p>
+  </section>
+  {% endif %}
+{% if result.complete %}
+<form method="post" action="{{ url_for('run_demo') }}" data-demo-form>
+  <button type="submit" class="primary">Run again</button>
+</form>
+{% else %}
+<form method="post" action="{{ url_for('advance_demo', run_id=run_id) }}" id="demo-continue" data-demo-form>
+    <button type="submit" class="primary">{% if result.steps|length == 5 %}Show optional style bonus{% else %}Continue{% endif %} <span class="mono">(Space)</span></button>
+</form>
+{% endif %}
+<script>
+  (function () {
+    const form = document.querySelector('[data-demo-form]');
+    if (form) {
+      form.addEventListener('submit', function () {
+        const button = form.querySelector('button[type="submit"]');
+        if (button) {
+          button.disabled = true;
+          button.textContent = 'Working…';
+        }
+      });
+    }
+
+    const continueForm = document.getElementById('demo-continue');
+    if (continueForm) {
+      document.addEventListener('keydown', function (event) {
+        if (event.code !== 'Space' || event.repeat || event.target.isContentEditable ||
+            ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(event.target.tagName)) return;
+        event.preventDefault();
+        continueForm.requestSubmit();
+      });
+    }
+  })();
+</script>
+{% endif %}
+{% endblock %}

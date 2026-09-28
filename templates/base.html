@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Meeting Prep{% endblock %} — Case Files</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="splash" aria-hidden="true">
+    <img src="{{ url_for('static', filename='logo-animated.svg') }}" alt="" width="140" height="140">
+    <div class="splash-title">Meeting Prep</div>
+  </div>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="{{ url_for('index') }}">
+        <img class="brand-mark" src="{{ url_for('static', filename='logo.svg') }}" alt="" width="42" height="42">
+        <div>
+          <div class="brand-title">Meeting Prep</div>
+          <div class="brand-sub">powered by Hindsight</div>
+        </div>
+      </a>
+
+      <nav class="nav">
+        <div class="nav-label">Contacts</div>
+        <ul class="contact-list">
+          {% for c_slug, c_info in (nav_contacts or {}).items() %}
+          <li>
+            <a href="{{ url_for('contact_page', slug=c_slug) }}"
+               class="{{ 'active' if c_slug == (active_slug or '') else '' }}">
+              {{ c_info.name }}
+            </a>
+          </li>
+          {% else %}
+          <li class="nav-empty">No contacts yet</li>
+          {% endfor %}
+        </ul>
+
+        <form class="quick-add" method="post" action="{{ url_for('add_contact') }}">
+          <input type="text" name="name" placeholder="New contact name" required>
+          <input type="text" name="company" placeholder="Company (optional)">
+          <input type="text" name="role" placeholder="Role (optional)">
+          <button type="submit">Open case file</button>
+        </form>
+      </nav>
+
+      <div class="nav-footer">
+        <a href="{{ url_for('style_page') }}" class="{{ 'active' if request.path == '/style' else '' }}">Agent style</a>
+        <a href="{{ url_for('demo_page') }}" class="{{ 'active' if request.path == '/demo' else '' }}">Run demo</a>
+        <a href="{{ url_for('about') }}" class="{{ 'active' if request.path == '/about' else '' }}">About</a>
+        <button onclick="window.open('/panel', 'MeetingPrepPanel', 'width=440,height=820,left=40,top=40')" 
+          class="floating-btn">
+          Open Floating Panel
+         </button>
+      </div>
+    </aside>
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script>
+    (function () {
+      function formatTime(totalSeconds) {
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = Math.floor(totalSeconds % 60).toString().padStart(2, '0');
+        return minutes + ':' + seconds;
+      }
+
+      function setElapsed(form, elapsedSeconds) {
+        const timeNode = form.querySelector('[data-progress-time]');
+        if (!timeNode) return;
+        timeNode.textContent = formatTime(elapsedSeconds);
+      }
+
+      document.querySelectorAll('form[data-transcribe]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          const progress = form.querySelector('.transcribe-progress');
+          const button = form.querySelector('button[type="submit"]');
+          const videoInput = form.querySelector('input[type="file"]');
+          if (!progress || !button || !videoInput || !videoInput.files.length) return;
+
+          button.disabled = true;
+          progress.hidden = false;
+          let start = performance.now();
+
+          const tick = function () {
+            const elapsedMs = performance.now() - start;
+            const elapsedSeconds = Math.floor(elapsedMs / 1000);
+            setElapsed(form, elapsedSeconds);
+            button.textContent = 'Transcribing… ' + formatTime(elapsedSeconds);
+
+            requestAnimationFrame(tick);
+          };
+
+          requestAnimationFrame(tick);
+        });
+      });
+
+      document.querySelectorAll('[data-copy-sample]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          const sample = document.getElementById(button.dataset.copySample);
+          const notes = document.getElementById(button.dataset.targetNotes);
+          if (!sample || !notes) return;
+          notes.value = sample.value;
+          const date = notes.form.querySelector('input[type="date"]');
+          if (date && button.dataset.sampleDate) date.value = button.dataset.sampleDate;
+          notes.focus();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

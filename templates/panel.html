@@ -1,0 +1,303 @@
+{% from "_macros.html" import sources_list, special_notes_section %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meeting Prep Panel</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='logo.svg') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      background: var(--paper);
+      margin: 0;
+      font-family: var(--sans);
+      color: var(--text);
+      line-height: 1.45;
+    }
+    .panel-shell {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 16px 16px 40px;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--ink);
+    }
+    .panel-header img {
+      width: 32px;
+      height: 32px;
+    }
+    .panel-header h1 {
+      font-family: var(--serif);
+      font-size: 1.25rem;
+      margin: 0;
+    }
+    .contact-select {
+      margin-bottom: 18px;
+    }
+    .contact-select select {
+      width: 100%;
+      padding: 10px 12px;
+      font: inherit;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .section {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section h2 {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      margin: 0 0 12px;
+    }
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+    label {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .optional {
+      font-weight: 400;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    input, textarea, select {
+      font: inherit;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      width: 100%;
+    }
+    input[type="file"] {
+      padding: 10px;
+      border-style: dashed;
+    }
+    button.primary {
+      background: var(--ink);
+      color: #fff;
+      border: 0;
+      padding: 10px 16px;
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+    }
+    button.primary:hover {
+      background: var(--brass-dark);
+    }
+    button.primary:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
+    .result {
+      margin-top: 14px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 14px;
+      font-size: 0.92rem;
+    }
+    .notice {
+      background: #f4f1e8;
+      border-left: 4px solid var(--brass);
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      font-size: 0.9rem;
+    }
+    .notice-error {
+      border-left-color: var(--oxblood);
+      background: #f9ecec;
+    }
+    .briefing {
+      font-size: 0.92rem;
+      border-left: 0;
+      padding: 0;
+      background: none;
+    }
+    .facts-grid {
+      display: grid;
+      gap: 12px;
+      margin-top: 10px;
+    }
+    .facts-grid h3 {
+      font-size: 0.9rem;
+      color: var(--brass-dark);
+      margin: 0 0 4px;
+    }
+    .hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .transcript {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .transcript summary {
+      cursor: pointer;
+    }
+    .transcript p {
+      white-space: pre-wrap;
+      margin: 8px 0 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel-shell">
+    <div class="panel-header">
+      <img src="{{ url_for('static', filename='logo.svg') }}" alt="">
+      <h1>Meeting Prep</h1>
+    </div>
+
+    <!-- Contact selector -->
+    <div class="contact-select">
+      <form method="get" action="" id="contactForm">
+        <label for="contact">Contact</label>
+        <select id="contact" onchange="if(this.value) window.location='/panel/' + this.value">
+          <option value="">Select a contact...</option>
+          {% for c_slug, c_info in (contacts or {}).items() %}
+          <option value="{{ c_slug }}" {% if slug == c_slug %}selected{% endif %}>
+            {{ c_info.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    {% if error %}
+    <p class="notice notice-error">{{ error }}</p>
+    {% endif %}
+
+    {% if info %}
+    <!-- Before meeting -->
+    <div class="section">
+      <h2>Before the meeting</h2>
+      <p class="hint">For the best briefing, log synthetic meeting notes or a demo recording below first.{% if reference_notes %} Use the sample notes to test this contact.{% endif %}</p>
+      <form method="post" action="{{ url_for('panel_prep', slug=slug) }}" class="stack">
+        <label for="goal">Goal <span class="optional">optional</span></label>
+        <input type="text" id="goal" name="goal" value="{{ goal }}" placeholder="e.g. get budget approval">
+        <button type="submit" class="primary">Generate briefing</button>
+      </form>
+
+      {% if prep_result %}
+      <div class="result">
+        <div class="briefing">{{ prep_result.briefing | briefing_html(prep_result.sources, "src") | safe }}</div>
+        {{ sources_list(prep_result.cited, "src") }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- After meeting -->
+    <div class="section">
+      <h2>After the meeting</h2>
+      <form method="post" action="{{ url_for('panel_log_meeting', slug=slug) }}"
+            class="stack" enctype="multipart/form-data" data-transcribe>
+        <label for="date">Date <span class="optional">defaults to today</span></label>
+        <input type="date" id="date" name="date">
+
+        <label for="video">Recording <span class="optional">optional</span></label>
+        <input type="file" id="video" name="video" accept="video/mp4,video/webm,audio/*,.mp4,.webm,.mp3,.m4a,.wav,.ogg,.flac">
+        <p class="hint">mp4, webm, mp3, m4a or wav. Transcription stops after 2 minutes 40 seconds; shorter audio-only files are fastest. The audio is sent to Groq and isn't kept.</p>
+
+        <label for="notes">Notes <span class="optional">optional</span></label>
+        <textarea id="notes" name="notes" rows="4" placeholder="Extra notes..."></textarea>
+        {% if reference_notes %}
+        <details class="reference-notes">
+          <summary>Sample synthetic notes for {{ info.name }}</summary>
+          <textarea id="sample-notes" rows="6" readonly>{{ reference_notes.text }}</textarea>
+          <button type="button" class="button" data-copy-sample="sample-notes" data-target-notes="notes" data-sample-date="{{ reference_notes.date }}">Use sample notes</button>
+        </details>
+        {% endif %}
+
+        <button type="submit" class="primary">Transcribe + Save</button>
+        <div class="transcribe-progress" hidden>
+          <div class="transcribe-progress__header">
+            <span class="transcribe-progress__label">Transcribing recording</span>
+            <span class="transcribe-progress__value" data-progress-time>00:00</span>
+          </div>
+          <div class="transcribe-progress__bar" aria-hidden="true">
+            <span class="transcribe-progress__fill"></span>
+          </div>
+          <div class="transcribe-progress__meta">
+            <span>Elapsed · max 2:40 processing</span>
+          </div>
+        </div>
+      </form>
+
+      {% if meeting_result %}
+      <div class="result">
+        <p class="notice">{{ meeting_result.count }} memories saved · Tone: <strong>{{ meeting_result.facts.sentiment }}</strong></p>
+        <div class="facts-grid">
+          {% for label, key in [("Discussed", "topics_discussed"), ("We promised", "promises_by_user"), ("They promised", "promises_by_contact")] %}
+          <div>
+            <h3>{{ label }}</h3>
+            {% if meeting_result.facts[key] %}
+            <ul>{% for item in meeting_result.facts[key] %}<li>{{ item }}</li>{% endfor %}</ul>
+            {% else %}<p class="muted">—</p>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if meeting_result.transcript %}
+        <details class="transcript">
+          <summary>Transcript that was saved</summary>
+          <p>{{ meeting_result.transcript }}</p>
+        </details>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {{ special_notes_section(slug, special_notes, note_candidates, notes_saved, true) }}
+    {% else %}
+    <p class="muted" style="text-align:center; margin-top:40px;">Select a contact to start</p>
+    {% endif %}
+  </div>
+  <script>
+    (function () {
+      document.querySelectorAll('form[data-transcribe]').forEach(function (form) {
+        form.addEventListener('submit', function () {
+          const progress = form.querySelector('.transcribe-progress');
+          const button = form.querySelector('button[type="submit"]');
+          const videoInput = form.querySelector('input[type="file"]');
+          if (!progress || !button || !videoInput || !videoInput.files.length) return;
+
+          button.disabled = true;
+          progress.hidden = false;
+          const start = performance.now();
+          const tick = function () {
+            const elapsedSeconds = Math.floor((performance.now() - start) / 1000);
+            const minutes = Math.floor(elapsedSeconds / 60).toString().padStart(2, '0');
+            const seconds = Math.floor(elapsedSeconds % 60).toString().padStart(2, '0');
+            const elapsed = minutes + ':' + seconds;
+            progress.querySelector('[data-progress-time]').textContent = elapsed;
+            button.textContent = 'Transcribing… ' + elapsed;
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        });
+      });
+
+      document.querySelectorAll('[data-copy-sample]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          const sample = document.getElementById(button.dataset.copySample);
+          const notes = document.getElementById(button.dataset.targetNotes);
+          if (!sample || !notes) return;
+          notes.value = sample.value;
+          const date = notes.form.querySelector('input[type="date"]');
+          if (date && button.dataset.sampleDate) date.value = button.dataset.sampleDate;
+          notes.focus();
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Case Files{% endblock %}
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">Meeting Prep Agent</p>
+  <h1>Open a case file</h1>
+  <p class="lede">Every contact gets an isolated memory bank. Log a meeting, and the
+  next prep briefing pulls straight from what's actually been said — no re-reading old notes.</p>
+</header>
+
+{% if contacts %}
+<div class="folder-grid">
+  {% for slug, info in contacts.items() %}
+  <a class="folder-card" href="{{ url_for('contact_page', slug=slug) }}">
+    <div class="folder-tab"></div>
+    <div class="folder-name">{{ info.name }}</div>
+    <div class="folder-meta">
+      {% if info.role %}<span>{{ info.role }}</span>{% endif %}
+      {% if info.company %}<span>{{ info.company }}</span>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>No case files yet. Add a contact from the sidebar, or</p>
+  <a class="button" href="{{ url_for('demo_page') }}">try the guided demo →</a>
+</div>
+{% endif %}
+{% endblock %}

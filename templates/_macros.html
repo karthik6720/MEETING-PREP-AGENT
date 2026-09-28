@@ -1,0 +1,54 @@
+{% macro sources_list(cited, prefix) %}
+{% if cited %}
+<div class="sources">
+  <h3>Where this came from</h3>
+  <ul class="source-list">
+    {% for s in cited %}
+    <li id="{{ prefix }}-{{ s.n }}"><span class="mono">{{ s.date or 'undated' }}</span>{{ s.text }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% macro special_notes_section(slug, notes, candidates, notes_saved, in_panel=false) %}
+<section class="panel special-notes-section">
+  <h2>Special notes</h2>
+  <p class="muted">Special notes are reminders saved just for this contact. Review the suggestions, select only what you want to keep, or add your own.</p>
+  {% if notes_saved %}
+  <p class="notice">Saved {{ notes_saved }} note{{ '' if notes_saved == 1 else 's' }} for this contact.</p>
+  {% endif %}
+  {% if candidates %}
+  <p class="muted">Review the suggested commitments and details. Only checked items will be saved.</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('save_contact_special_notes', slug=slug) }}" class="stack special-notes-form">
+    <input type="hidden" name="view" value="{{ 'panel' if in_panel else 'contact' }}">
+    {% if candidates %}
+    <fieldset class="special-note-candidates">
+      <legend>Suggestions from this {{ 'briefing' if candidates[0].source.startswith('Generated') or candidates[0].source.startswith('Recalled') else 'meeting' }}</legend>
+      {% for candidate in candidates %}
+      <label class="special-note-option">
+        <input type="checkbox" name="selected_notes" value='{{ candidate|tojson }}'>
+        <span><small>{{ candidate.source }}{% if candidate.date %} · {{ candidate.date }}{% endif %}</small>{{ candidate.text }}</span>
+      </label>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+    <label for="manual-special-note">Add a note yourself <span class="optional">optional</span></label>
+    <textarea id="manual-special-note" name="manual_note" rows="3" placeholder="A commitment, date, preference, or other detail to remember"></textarea>
+    <button type="submit" class="primary">Save selected notes</button>
+  </form>
+  {% if notes %}
+  <ul class="saved-special-notes">
+    {% for note in notes %}
+    <li>
+      <span>{{ note.text }}</span>
+      <small>{{ note.source }}{% if note.date %} · {{ note.date }}{% endif %}</small>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No special notes saved for this contact yet.</p>
+  {% endif %}
+</section>
+{% endmacro %}

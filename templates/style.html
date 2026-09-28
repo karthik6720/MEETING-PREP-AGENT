@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Agent style{% endblock %}
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">Agent style</p>
+  <h1>How you like briefings written</h1>
+  <p class="lede">Feedback here is stored in its own Hindsight memory bank and applies to every contact’s briefing from now on.</p>
+</header>
+
+<!-- ========== CURRENT STYLE ========== -->
+<section class="panel">
+  <h2>What the agent currently knows</h2>
+  {% if style_notes %}
+  <div class="briefing">{{ style_notes | briefing_html | safe }}</div>
+  {% else %}
+  <p class="muted">Nothing yet. Tell it how you want briefings written below.</p>
+  {% endif %}
+</section>
+
+<!-- ========== GIVE FEEDBACK ========== -->
+<section class="panel">
+  <h2>Give feedback</h2>
+  {% if saved %}<p class="notice">Saved. Your next briefing will follow this.</p>{% endif %}
+  <form method="post" action="{{ url_for('style_feedback') }}" class="stack">
+    <label for="feedback">Feedback</label>
+    <textarea id="feedback" name="feedback" rows="4" required
+      placeholder="e.g. Keep it under 150 words, bullets only, skip the relationship history."></textarea>
+    <button type="submit" class="primary">Save feedback</button>
+  </form>
+</section>
+<!-- ========== HOW HINDSIGHT WORKS ========== -->
+<section class="panel prose">
+  <h2>How Hindsight memory works in this project</h2>
+  <p>Meeting Prep uses <strong>Hindsight</strong> as a persistent memory layer. Every contact has its own memory bank, and your preferred briefing style lives in a separate bank.</p>
+
+  <!-- Proper Flowchart -->
+  <div class="flowchart">
+    <div class="flow-box">
+      <div class="flow-title">1. Log the meeting</div>
+      <div class="flow-desc">Upload screen recording + optional notes</div>
+    </div>
+
+    <div class="flow-line"></div>
+
+    <div class="flow-box">
+      <div class="flow-title">2. Extract facts</div>
+      <div class="flow-desc">LLM pulls out topics, promises, concerns & tone</div>
+    </div>
+
+    <div class="flow-line"></div>
+
+    <div class="flow-box">
+      <div class="flow-title">3. Retain in Hindsight</div>
+      <div class="flow-desc">Each fact is stored as a dated memory in the contact’s bank</div>
+    </div>
+
+    <div class="flow-line"></div>
+
+    <div class="flow-box">
+      <div class="flow-title">4. Recall + Style</div>
+      <div class="flow-desc">Agent recalls relevant memories + your preferred writing style</div>
+    </div>
+
+    <div class="flow-line"></div>
+
+    <div class="flow-box final">
+      <div class="flow-title">5. Personalized briefing</div>
+      <div class="flow-desc">Full context briefing written exactly how you like it</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 40px;">Key memory features</h3>
+  <dl class="defs">
+    <div>
+      <dt>One memory bank per contact</dt>
+      <dd>Everything about one person stays completely separate from everyone else.</dd>
+    </div>
+    <div>
+      <dt>Retain</dt>
+      <dd>Every promise, concern and topic is stored as a small, dated statement instead of one big transcript.</dd>
+    </div>
+    <div>
+      <dt>Recall & Reflect</dt>
+      <dd>Before a meeting the agent pulls the relevant memories and builds a briefing from them. You can also see exactly which memories were used.</dd>
+    </div>
+    <div>
+      <dt>Style memory (this page)</dt>
+      <dd>Your feedback about how you like briefings written is stored in a separate bank and applied to every contact from then on.</dd>
+    </div>
+  </dl>
+</section>
+{% endblock %}

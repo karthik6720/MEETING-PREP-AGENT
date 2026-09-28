@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1>Walk into every meeting already caught up</h1>
+  <p class="lede">Meeting Prep remembers every conversation you have with a contact. Before your next meeting, it tells you what was discussed, what you promised, what they promised, and what to watch for.</p>
+</header>
+
+<section class="panel prose">
+  <h2>The problem</h2>
+  <p>Before a call, most people quickly scan old notes and hope they remember the important parts. Promises get missed, a late delivery is forgotten, and the other person notices. A tool that only answers questions has nothing to work with. This one remembers between meetings, so it gets better the more you use it.</p>
+</section>
+
+<section class="panel prose">
+  <h2>Screen recording → Instant briefing</h2>
+  <p>After any meeting, just upload the screen recording (Zoom, Google Meet, Microsoft Teams, Loom, etc.) along with optional notes. Meeting Prep will:</p>
+  <ul>
+    <li>Transcribe the recording</li>
+    <li>Extract what was discussed, what each side promised, and any concerns</li>
+    <li>Store everything as lasting memories in Hindsight</li>
+    <li>Generate a clear prep briefing for your next conversation with that contact</li>
+  </ul>
+  <p>You no longer need to write perfect notes. The recording is enough.</p>
+</section>
+
+<section class="panel prose">
+  <h2>Where Hindsight memory is used</h2>
+  <dl class="defs">
+    <div>
+      <dt>One memory bank per contact</dt>
+      <dd>Everything about one person stays completely separate from everyone else, so a briefing never mixes up different relationships.</dd>
+    </div>
+    <div>
+      <dt>Retain</dt>
+      <dd>Every promise, concern and topic is stored as a short, dated statement instead of one long transcript. That makes it easier to find later.</dd>
+    </div>
+    <div>
+      <dt>Recall and reflect</dt>
+      <dd>Before a meeting, the agent pulls the relevant memories and summarises the relationship. The briefing is built from that, and the memories are shown on the page so you can check them.</dd>
+    </div>
+    <div>
+      <dt>A separate style memory</dt>
+      <dd>Feedback like “keep it under 150 words” is stored in its own bank and applies to every contact’s briefing from then on.</dd>
+    </div>
+  </dl>
+</section>
+
+<section class="panel prose">
+  <h2>What it doesn’t do yet</h2>
+  <ul>
+    <li>It doesn’t automatically connect to your calendar.</li>
+    <li>It’s built for one user on one machine (no accounts or sharing).</li>
+    <li>Briefings are only as good as the recording and notes you give it.</li>
+  </ul>
+</section>
+
+<section class="panel prose">
+  <h2>Built with</h2>
+  <p>
+    Powered by <a href="https://hindsight.vectorize.io/" target="_blank" rel="noopener">Hindsight</a>,
+    Groq ({{ model }}) for transcription, fact extraction and writing briefings,
+    and Python with Flask for this site.
+  </p>
+  <p><a class="button" href="{{ url_for('demo_page') }}">Watch the guided demo</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sources_list %}
+{% from "_macros.html" import special_notes_section %}
+{% block title %}{{ info.name }}{% endblock %}
+{% block content %}
+<header class="page-head">
+  <p class="eyebrow">{{ slug }}</p>
+  <h1>{{ info.name }}</h1>
+  <p class="lede">
+    {% if info.role %}{{ info.role }}{% endif %}{% if info.role and info.company %}, {% endif %}{% if info.company %}{{ info.company }}{% endif %}
+    {% if not info.role and not info.company %}No role or company recorded.{% endif %}
+  </p>
+  <form method="post" action="{{ url_for('delete_contact', slug=slug) }}" onsubmit="return confirm('Remove this contact and delete their saved memory bank?');" class="delete-contact-form">
+    <button type="submit" class="danger-button">Remove contact</button>
+  </form>
+</header>
+
+{% if error %}<p class="notice notice-error">{{ error }}</p>{% endif %}
+
+<section class="panel">
+  <h2>Before the meeting</h2>
+  <p class="muted">For the best briefing, log synthetic meeting notes or a demo recording under “After the meeting” first.{% if reference_notes %} Use the sample notes below to test this contact.{% endif %}</p>
+  <form method="post" action="{{ url_for('prep', slug=slug) }}" class="stack">
+    <label for="goal">What do you want out of this meeting? <span class="optional">optional</span></label>
+    <input type="text" id="goal" name="goal" value="{{ goal }}" placeholder="e.g. get the CTO to sign off">
+    <button type="submit" class="primary">Generate prep briefing</button>
+  </form>
+
+  {% if prep_result %}
+  <div class="result">
+    <div class="briefing">{{ prep_result.briefing | briefing_html(prep_result.sources, "src") | safe }}</div>
+    {{ sources_list(prep_result.cited, "src") }}
+
+    {% if prep_result.followups %}
+    <div class="followups">
+      <h3>Open follow-ups</h3>
+      <ul>{% for f in prep_result.followups %}<li>{{ f }}</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+
+    {% if prep_result.raw_memories %}
+    <details class="raw-memories">
+      <summary>{{ prep_result.raw_memories | length }} memories retrieved from Hindsight</summary>
+      <ul>{% for m in prep_result.raw_memories %}<li>{{ m }}</li>{% endfor %}</ul>
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>After the meeting</h2>
+  <form method="post" action="{{ url_for('log_meeting', slug=slug) }}" class="stack" enctype="multipart/form-data" data-transcribe>
+    <label for="date">Meeting date <span class="optional">defaults to today</span></label>
+    <input type="date" id="date" name="date">
+    <label for="video">Recording <span class="optional">optional</span></label>
+    <input type="file" id="video" name="video" accept="video/mp4,video/webm,audio/*,.mp4,.webm,.mp3,.m4a,.wav,.ogg,.flac">
+    <p class="muted">mp4, webm, mp3, m4a or wav. Transcription stops after 2 minutes 40 seconds; shorter audio-only files are fastest. The audio is sent to Groq and isn't kept.</p>
+    <label for="notes">Your raw notes <span class="optional">optional if you upload a recording</span></label>
+    <textarea id="notes" name="notes" rows="7"
+      placeholder="Paste or type whatever you have. Promises made by either side, objections, tone. Messy is fine."></textarea>
+    {% if reference_notes %}
+    <details class="reference-notes">
+      <summary>Sample synthetic notes for {{ info.name }}</summary>
+      <textarea id="sample-notes" rows="6" readonly>{{ reference_notes.text }}</textarea>
+      <button type="button" class="button" data-copy-sample="sample-notes" data-target-notes="notes" data-sample-date="{{ reference_notes.date }}">Use sample notes</button>
+    </details>
+    {% endif %}
+    <button type="submit" class="primary">Transcribe + save to memory</button>
+    <div class="transcribe-progress" hidden>
+      <div class="transcribe-progress__header">
+        <span class="transcribe-progress__label">Transcribing recording</span>
+        <span class="transcribe-progress__value" data-progress-time>00:00</span>
+      </div>
+      <div class="transcribe-progress__bar" aria-hidden="true">
+        <span class="transcribe-progress__fill"></span>
+      </div>
+      <div class="transcribe-progress__meta">
+        <span>Elapsed · max 2:40 processing</span>
+      </div>
+    </div>
+  </form>
+
+  {% if meeting_result %}
+  <div class="result">
+    <p class="notice">{{ meeting_result.count }} memories retained. Overall tone: <strong>{{ meeting_result.facts.sentiment }}</strong>.</p>
+    <div class="facts-grid">
+      {% for label, key in [("Discussed", "topics_discussed"), ("We promised", "promises_by_user"), ("They promised", "promises_by_contact"), ("Concerns raised", "concerns_or_objections")] %}
+      <div>
+        <h3>{{ label }}</h3>
+        {% if meeting_result.facts[key] %}
+        <ul>{% for item in meeting_result.facts[key] %}<li>{{ item }}</li>{% endfor %}</ul>
+        {% else %}<p class="muted">Nothing recorded.</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if meeting_result.transcript %}
+    <details class="raw-memories">
+      <summary>Transcript that was saved</summary>
+      <p style="white-space: pre-wrap">{{ meeting_result.transcript }}</p>
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+{{ special_notes_section(slug, special_notes, note_candidates, notes_saved) }}
+{% endblock %}

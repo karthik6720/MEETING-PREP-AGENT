@@ -1,0 +1,12 @@
+{% macro sources_list(cited, prefix) %}
+{% if cited %}
+<div class="sources">
+  <h3>Where this came from</h3>
+  <ul class="source-list">
+    {% for s in cited %}
+    <li id="{{ prefix }}-{{ s.n }}"><span class="mono">{{ s.date or 'undated' }}</span>{{ s.text }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endmacro %}
