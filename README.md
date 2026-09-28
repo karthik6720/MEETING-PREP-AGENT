@@ -1,132 +1,97 @@
 # Meeting Prep Agent
 
-A memory-powered agent that briefs you before a meeting with full context
-from every past interaction with that contact — built for HackWithHyderabad
-3.0 on [Hindsight](https://hindsight.vectorize.io).
+A meeting-preparation app that turns meeting notes and recordings into contact-specific memory. It uses [Hindsight](https://hindsight.vectorize.io) to retain and recall relationship facts, and Groq to transcribe recordings, extract facts, and write briefings.
 
-> "Sales reps waste hours re-reading CRM notes before calls. An agent with
-> deal memory can brief a rep in seconds and suggest winning tactics based
-> on past deals." — the problem statement this targets.
+## Quick Start
 
-## The 60-second demo story
+1. **Create and activate a virtual environment** from the project folder.
 
-1. Ask for a prep briefing on a brand-new contact → the agent has nothing to
-   say. Generic, useless.
-2. Log three real meetings over six weeks (objections raised, promises made
-   on both sides, a blocker, a resolved blocker).
-3. Ask for the *same* prep briefing again → it's now a sharp, specific
-   summary: what's changed, what's still owed, what to say to close.
-4. Give the agent one line of feedback on briefing style ("keep it under
-   150 words, bullets only") → the very next briefing obeys it.
+	Windows PowerShell:
 
-Run it yourself in one command:
+	```powershell
+	python -m venv .venv
+	.\.venv\Scripts\Activate.ps1
+	```
 
-```bash
-python cli.py demo
-```
+	macOS or Linux:
 
-## Why memory is the star, not a feature
+	```bash
+	python3 -m venv .venv
+	source .venv/bin/activate
+	```
 
-Every other part of this project (Groq calls, the CLI, the contact
-registry) is plumbing. The actual product is what's stored in and
-retrieved from Hindsight:
+2. **Install the project requirements.**
 
-- **One Hindsight memory bank per contact** (`contact::<slug>`). Deal
-  memory for Rohan at Northwind never bleeds into deal memory for anyone
-  else — the same way a rep keeps deals mentally separate.
-- **`retain()`** stores *atomic* facts, not raw transcripts: each promise,
-  objection, and topic becomes its own tagged, timestamped memory
-  (`kind`, `contact`, `slug` metadata). Small self-contained statements
-  recall and reflect far better than giant blobs.
-- **`reflect()`** is what generates the relationship summary the briefing
-  is grounded in — this is Hindsight's disposition-aware synthesis across
-  everything retained for that contact, not a prompt we hand-wrote.
-- **`recall()`** additionally surfaces the raw matching memories in the
-  CLI output (`Raw memories retrieved from Hindsight`), so it's visible
-  that the briefing is grounded in real retained facts and not the LLM
-  making things up.
-- **A second, separate bank (`user-style-preferences`)** stores feedback
-  on the agent's own output. This is memory the agent has about *itself*
-  — it's how "keep it under 150 words" persists across every future
-  briefing for every contact, without retraining or hardcoding.
+	```bash
+	python -m pip install -r requirements.txt
+	```
+
+3. **Add your API keys.** Create a `.env` file in the project folder and add your [Hindsight API key](https://ui.hindsight.vectorize.io) and [Groq API key](https://console.groq.com):
+
+	```text
+	HINDSIGHT_API_KEY=your_hindsight_api_key
+	GROQ_API_KEY=your_groq_api_key
+	HINDSIGHT_BASE_URL=https://api.hindsight.vectorize.io
+	```
+
+	The first two values are required. `.env` is ignored by Git; do not commit API keys.
+
+4. **Start the website.**
+
+	```bash
+	python webapp.py
+	```
+
+	Open <http://127.0.0.1:5000> in your browser. Install FFmpeg separately if you want to transcribe video recordings.
+
+5. **Optional: try the CLI.**
+
+	```bash
+	python cli.py demo
+	python cli.py contacts
+	```
+
+## Features
+
+- A Hindsight memory bank for each contact keeps their topics, commitments, concerns, and meeting history separate.
+- Log a meeting from typed notes or an audio/video recording, then generate a prep briefing from what was retained.
+- Rohan Kapoor and Priya Menon have synthetic sample notes on their contact pages and in the floating panel. Use these to try the workflow without writing notes first.
+- **Special notes** lets you review proposed commitments and details after meeting logging or briefing generation. Select the items to save, or add your own. Saved notes belong to that contact and appear in both the contact page and panel.
+- The web app includes a guided demo with one-step-at-a-time controls. Its core shows a blank-memory briefing, three meetings, and a memory-aware briefing; two additional stages demonstrate personalized briefing focus.
+
+## Guided Demo
+
+The first five stages are the core walkthrough:
+
+1. Generate a briefing before any meetings are logged.
+2. Retain each of three synthetic meetings as a separate step.
+3. Recall the historical commitments and compare them with a focused CTO sign-off briefing.
+
+Two optional stages record style feedback and show the personalized briefing. The demo's synthetic facts are defined in `data/seed_demo_data.py`.
+
+## Recordings
+
+The web app accepts MP4, WebM, MP3, M4A, WAV, OGG, FLAC, MPEG, and MPGA files up to 250 MB. Video is converted to audio before transcription when FFmpeg is available. Transcription has a 2 minute 40 second processing deadline; the initial upload and later fact extraction/memory saving can take additional time. Short audio-only recordings are usually quickest. The app does not keep the uploaded recording after processing.
 
 ## Architecture
 
-```
-cli.py                 click CLI: contact-add, meeting-log, prep, feedback, demo
-agent/
-  config.py            env vars, bank-id naming
-  contacts.py           local address book (name <-> Hindsight bank slug)
-  memory.py             ALL Hindsight calls live here (retain/recall/reflect)
-  llm.py                Groq: raw notes -> structured facts, and
-                         memory context -> polished briefing
-data/
-  seed_demo_data.py     synthetic 3-meeting deal history + before/after demo
-```
-
-**Agent loop:**
-
-```
-raw meeting notes
-      │  Groq (function-calling, with a plain-JSON fallback
-      │  for when tool-calling flakes on smaller models)
-      ▼
-structured facts (topics / promises×2 / concerns / sentiment)
-      │  Hindsight retain() -- one atomic memory per fact
-      ▼
-Hindsight memory bank (per contact)
-      │  Hindsight recall() + reflect()
-      ▼
-grounded relationship context + open follow-ups
-      │  Groq -- compose_briefing(), honoring style_notes()
-      ▼
-prep briefing
+```text
+webapp.py                 Flask contact pages, floating panel, and guided demo
+cli.py                    Click commands for contacts, meetings, prep, feedback, and demo
+agent/config.py            Environment settings and bank IDs
+agent/contacts.py          Local contact registry and per-contact Special notes
+agent/workflow.py          Shared meeting, transcription, and briefing workflows
+agent/memory.py            Hindsight retain, recall, and reflect calls
+agent/llm.py               Groq transcription, fact extraction, and briefing generation
+data/seed_demo_data.py     Synthetic sample notes and guided demo stages
+templates/                 Web pages and reusable template macros
+static/style.css           Shared site and panel styles
 ```
 
-## Setup
+Meeting notes are extracted into dated topics, promises, and concerns, then retained as small facts in the contact's Hindsight bank. Prep combines recalled sources, open follow-ups, relationship context, and the user's style preferences to produce the briefing.
 
-```bash
-pip install -r requirements.txt
-cp .env.example .env
-# fill in HINDSIGHT_API_KEY (ui.hindsight.vectorize.io -> Connect -> Create API Key)
-# and GROQ_API_KEY (console.groq.com)
-```
+## Current Limitations
 
-Hindsight Cloud signup: use promo code `MEMHACK99` in the billing section
-after registering for $50 in free credits.
-
-## Usage
-
-```bash
-# One-command demo with realistic synthetic data (recommended for judges)
-python cli.py demo
-
-# Real usage
-python cli.py contact-add "Priya Menon" --company "Acme Retail" --role "VP Sales"
-python cli.py meeting-log priya-menon --notes "..." --date 2026-09-20
-python cli.py prep priya-menon --goal "close the Q4 renewal"
-python cli.py feedback "keep briefings under 150 words, bullets only"
-python cli.py contacts
-```
-
-## Judging-criteria notes
-
-- **Use of Hindsight memory (25%):** memory isn't a side feature — the
-  briefing *is* a `reflect()` call, grounded by visible `recall()` output,
-  and the agent's own output style is itself stored and recalled memory.
-- **Real-world impact:** targets a workflow (deal/relationship memory
-  before calls) that sales, account management, and customer success
-  teams already pay for in CRM tooling — this is the memory layer they're
-  missing.
-- **Technical implementation:** Groq function-calling has an explicit
-  fallback path for malformed/missing tool calls, per the hackathon's own
-  warning that smaller open models can flake on function calling.
-
-## Known limitations / next steps
-
-- Style preferences are recalled per-briefing but not yet A/B tested for
-  drift over many feedback rounds.
-- No calendar integration yet — meetings are logged manually. A real
-  version would pull meeting transcripts (Zoom/Meet) automatically.
-- Single-user only; a team version would need per-user auth on top of the
-  per-contact bank isolation that already exists.
+- Meetings are added manually; there is no calendar or conferencing integration.
+- The contact registry and Special notes are stored locally in `data/contacts.json`.
+- The app is single-user and does not include authentication or team access controls.
