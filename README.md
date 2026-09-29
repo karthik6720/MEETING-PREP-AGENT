@@ -71,7 +71,7 @@ Two optional stages record style feedback and show the personalized briefing. Th
 
 ## Recordings
 
-The web app accepts MP4, WebM, MP3, M4A, WAV, OGG, FLAC, MPEG, and MPGA files up to 250 MB. Video is converted to audio before transcription when FFmpeg is available. Transcription has a 2 minute 40 second processing deadline; the initial upload and later fact extraction/memory saving can take additional time. Short audio-only recordings are usually quickest. The app does not keep the uploaded recording after processing.
+The web app accepts MP4, WebM, MP3, M4A, WAV, OGG, FLAC, MPEG, and MPGA files up to 250 MB. Video is converted to audio before transcription when FFmpeg is available. The initial upload and later fact extraction/memory saving can take additional time. Short audio-only recordings are usually quickest. The app does not keep the uploaded recording after processing.
 
 ## Architecture
 

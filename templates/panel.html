@@ -207,7 +207,7 @@
 
         <label for="video">Recording <span class="optional">optional</span></label>
         <input type="file" id="video" name="video" accept="video/mp4,video/webm,audio/*,.mp4,.webm,.mp3,.m4a,.wav,.ogg,.flac">
-        <p class="hint">mp4, webm, mp3, m4a or wav. Transcription stops after 2 minutes 40 seconds; shorter audio-only files are fastest. The audio is sent to Groq and isn't kept.</p>
+        <p class="hint">mp4, webm, mp3, m4a or wav. The audio is sent to Groq and isn't kept.</p>
 
         <label for="notes">Notes <span class="optional">optional</span></label>
         <textarea id="notes" name="notes" rows="4" placeholder="Extra notes..."></textarea>
@@ -229,7 +229,7 @@
             <span class="transcribe-progress__fill"></span>
           </div>
           <div class="transcribe-progress__meta">
-            <span>Elapsed · max 2:40 processing</span>
+            <span>Elapsed</span>
           </div>
         </div>
       </form>

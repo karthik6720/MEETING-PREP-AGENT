@@ -15,6 +15,9 @@ GROQ_WHISPER_MODEL = os.getenv("GROQ_WHISPER_MODEL", "whisper-large-v3-turbo")
 # Language spoken in the recordings (ISO code). Setting it improves accuracy;
 # set TRANSCRIPTION_LANGUAGE= (empty) to let Whisper auto-detect.
 TRANSCRIPTION_LANGUAGE = os.getenv("TRANSCRIPTION_LANGUAGE", "en")
+# Default is disabled (0) to allow long demo recordings to finish. Set a value
+# in seconds to enforce a hard timeout during transcription.
+TRANSCRIPTION_TIMEOUT_SECONDS = int(os.getenv("TRANSCRIPTION_TIMEOUT_SECONDS", "0") or "0")
 
 # Every contact gets their own isolated Hindsight memory bank, named
 # "contact::<slug>". This keeps recall scoped to one relationship at a

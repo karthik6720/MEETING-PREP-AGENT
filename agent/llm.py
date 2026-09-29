@@ -30,13 +30,18 @@ from groq import APIConnectionError, Groq
 from . import config
 
 _client: Groq | None = None
-_TRANSCRIPTION_DEADLINE_SECONDS = 160
+_TRANSCRIPTION_TIMEOUT_SECONDS = config.TRANSCRIPTION_TIMEOUT_SECONDS
 _TRANSCRIPTION_REQUEST_TIMEOUT_SECONDS = 60
 _TRANSCRIPTION_TIMEOUT_MESSAGE = (
-    "Transcription timed out after 2 minutes 40 seconds. "
-    "Try a shorter recording or upload audio only."
+    "Transcription timed out. Try a shorter recording or upload audio only."
 )
 _AUDIO_ONLY_EXTENSIONS = {".mp3", ".m4a", ".wav", ".ogg", ".flac", ".mpeg", ".mpga"}
+
+
+def _transcription_deadline() -> float | None:
+    if _TRANSCRIPTION_TIMEOUT_SECONDS <= 0:
+        return None
+    return time.monotonic() + _TRANSCRIPTION_TIMEOUT_SECONDS
 
 
 def _get_client() -> Groq:
@@ -219,10 +224,18 @@ def _remaining_transcription_time(deadline: float) -> float:
     return remaining
 
 
-def _run_ffmpeg(stream, deadline: float) -> None:
+def _check_transcription_deadline(deadline: float | None) -> None:
+    if deadline is not None:
+        _remaining_transcription_time(deadline)
+
+
+def _run_ffmpeg(stream, deadline: float | None) -> None:
     process = stream.run_async(pipe_stdout=True, pipe_stderr=True)
     try:
-        _, stderr = process.communicate(timeout=_remaining_transcription_time(deadline))
+        if deadline is None:
+            _, stderr = process.communicate()
+        else:
+            _, stderr = process.communicate(timeout=_remaining_transcription_time(deadline))
     except (subprocess.TimeoutExpired, TimeoutError) as exc:
         try:
             process.kill()
@@ -247,7 +260,7 @@ def transcribe_media(filename: str, data: bytes, deadline: float | None = None) 
             timeout = (
                 min(_TRANSCRIPTION_REQUEST_TIMEOUT_SECONDS,
                     _remaining_transcription_time(deadline))
-                if deadline is not None else 300
+                if deadline is not None else None
             )
             resp = _get_client().audio.transcriptions.create(
                 file=(filename, data),
@@ -256,8 +269,7 @@ def transcribe_media(filename: str, data: bytes, deadline: float | None = None) 
                 timeout=timeout,
                 **options,
             )
-            if deadline is not None:
-                _remaining_transcription_time(deadline)
+            _check_transcription_deadline(deadline)
             return (resp.text or "").strip()
         except APIConnectionError:
             if attempt == 2 or deadline is None:
@@ -268,14 +280,13 @@ def transcribe_media(filename: str, data: bytes, deadline: float | None = None) 
 def _transcribe_file(file_path: str, deadline: float | None = None) -> str:
     with open(file_path, "rb") as audio_file:
         data = audio_file.read()
-    if deadline is not None:
-        _remaining_transcription_time(deadline)
+    _check_transcription_deadline(deadline)
     return transcribe_media(os.path.basename(file_path), data, deadline)
 
 
 def transcribe_video(video_file) -> str:
     """Send the original upload to Groq first; only fall back to ffmpeg conversion if the API rejects it."""
-    deadline = time.monotonic() + _TRANSCRIPTION_DEADLINE_SECONDS
+    deadline = _transcription_deadline()
     suffix = os.path.splitext(video_file.filename or "")[1] or ".mp4"
     video_path = None
     audio_path = None
@@ -294,7 +305,7 @@ def transcribe_video(video_file) -> str:
             try:
                 return _transcribe_file(video_path, deadline)
             except Exception:
-                _remaining_transcription_time(deadline)
+                _check_transcription_deadline(deadline)
                 if ffmpeg is None:
                     raise
         elif ffmpeg is None:
@@ -316,12 +327,12 @@ def transcribe_video(video_file) -> str:
             deadline,
         )
 
-        _remaining_transcription_time(deadline)
+        _check_transcription_deadline(deadline)
         if os.path.getsize(audio_path) <= 24 * 1024 * 1024:
             return _transcribe_file(audio_path, deadline)
 
         probe = ffmpeg.probe(audio_path)
-        _remaining_transcription_time(deadline)
+        _check_transcription_deadline(deadline)
         duration = float(probe["format"].get("duration", 0) or 0)
         if duration <= 0:
             raise RuntimeError("Could not determine the compressed audio duration.")
@@ -331,7 +342,7 @@ def transcribe_video(video_file) -> str:
         parts: list[str] = []
         with tempfile.TemporaryDirectory() as tmpdir:
             for idx in range(total_chunks):
-                _remaining_transcription_time(deadline)
+                _check_transcription_deadline(deadline)
                 chunk_path = os.path.join(tmpdir, f"chunk_{idx}.mp3")
                 _run_ffmpeg(
                     ffmpeg
